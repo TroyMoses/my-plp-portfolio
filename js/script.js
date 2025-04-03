@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             
             try {
-                const response = await fetch('http://localhost:5000/api/contact', {
+                const response = await fetch('https://my-plp-portfolio.onrender.com/api/contact', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             try {
-                const response = await fetch('http://localhost:5000/api/newsletter', {
+                const response = await fetch('https://my-plp-portfolio.onrender.com/api/newsletter', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
