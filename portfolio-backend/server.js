@@ -10,7 +10,18 @@ const newsletterService = require('./services/newsletterService');
 const app = express();
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: [
+    'https://troymosesmugabi.netlify.app',
+    'http://localhost:3000',
+    'https://my-plp-portfolio.onrender.com'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // Initialize database
