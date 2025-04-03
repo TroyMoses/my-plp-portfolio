@@ -1,10 +1,10 @@
-const config = require('./env');
-const mysql = require('mysql2/promise');
-const mongoose = require('mongoose');
+const config = require("./env");
+const mysql = require("mysql2/promise");
+const mongoose = require("mongoose");
 
 let db;
 
-if (config.database.dialect === 'mysql') {
+if (process.env.NODE_ENV === "development") {
   // MySQL connection
   db = {
     async connect() {
@@ -13,9 +13,9 @@ if (config.database.dialect === 'mysql') {
         user: config.database.user,
         password: config.database.password,
         database: config.database.database,
-        port: config.database.port
+        port: config.database.port,
       });
-      
+
       // Initialize tables if they don't exist
       await connection.execute(`
         CREATE TABLE IF NOT EXISTS contacts (
@@ -27,7 +27,7 @@ if (config.database.dialect === 'mysql') {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      
+
       await connection.execute(`
         CREATE TABLE IF NOT EXISTS newsletter_subscribers (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -35,12 +35,12 @@ if (config.database.dialect === 'mysql') {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      
+
       return connection;
     },
     getConnection() {
       return mysql.createPool(config.database);
-    }
+    },
   };
 } else {
   // MongoDB connection
@@ -48,21 +48,16 @@ if (config.database.dialect === 'mysql') {
     async connect() {
       try {
         await mongoose.connect(config.database.uri, config.database.options);
-        console.log('MongoDB connected successfully');
-        
-        // Set up Mongoose models
-        require('../models/subscriber');
-        require('../models/contact');
-        
+        console.log("MongoDB connected successfully");
         return mongoose.connection;
       } catch (error) {
-        console.error('MongoDB connection error:', error);
+        console.error("MongoDB connection error:", error);
         throw error;
       }
     },
     getConnection() {
       return mongoose.connection;
-    }
+    },
   };
 }
 

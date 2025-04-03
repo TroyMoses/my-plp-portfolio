@@ -4,7 +4,6 @@ const env = process.env.NODE_ENV || 'development';
 
 const development = {
   database: {
-    dialect: 'mysql',
     host: process.env.DEV_DB_HOST,
     user: process.env.DEV_DB_USER,
     password: process.env.DEV_DB_PASSWORD,
