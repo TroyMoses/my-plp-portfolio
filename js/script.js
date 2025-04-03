@@ -1,7 +1,6 @@
-
 /**
  * Portfolio Website - Main JavaScript File
- * 
+ *
  * This script handles:
  * - Preloader functionality
  * - Mobile navigation toggle
@@ -153,30 +152,149 @@ document.addEventListener('DOMContentLoaded', function() {
     const contactForm = document.getElementById('contactForm');
     
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+        contactForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Get form values
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const subject = document.getElementById('subject').value;
-            const message = document.getElementById('message').value;
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const message = document.getElementById('message').value.trim();
             
-            // Here you would typically send the form data to a server
-            // For this example, we'll just log it and show an alert
-            console.log({ name, email, subject, message });
+            // Get submit button and set loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             
-            alert(`Thank you, ${name} for your message! I will get back to you soon.`);
-            contactForm.reset();
+            try {
+                const response = await fetch('http://localhost:5000/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, subject, message }),
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to send message');
+                }
+                
+                // Show success message
+                showAlert('success', 'Message sent successfully! You should receive a confirmation email shortly. If you do not see it, please check your spam folder.');
+                contactForm.reset();
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                showAlert('error', error.message || 'There was an error sending your message. Please try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+            }
         });
     }
+
+    // ===== Newsletter Form Submission =====
+    const newsletterForm = document.querySelector('.newsletter-form');
+    
+    if (newsletterForm) {
+        newsletterForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const emailInput = this.querySelector('input[type="email"]');
+            const email = emailInput.value.trim();
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            
+            // Set loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/newsletter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email }),
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to subscribe');
+                }
+                
+                // Show success message
+                showAlert('success', 'Thank you for subscribing! Please check your email, or spam folder for confirmation.');
+                emailInput.value = '';
+            } catch (error) {
+                console.error('Error subscribing:', error);
+                showAlert('error', error.message || 'There was an error subscribing. Please try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        });
+    }
+
+    // Helper function to show alerts
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        
+        // Add to top of body
+        document.body.prepend(alertDiv);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            alertDiv.classList.add('fade-out');
+            setTimeout(() => alertDiv.remove(), 300);
+        }, 5000);
+    }
+
+    // Add some basic CSS for alerts
+    const alertStyles = document.createElement('style');
+    alertStyles.textContent = `
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        .alert-success {
+            background-color: #48bb78;
+        }
+        .alert-error {
+            background-color: #f56565;
+        }
+        .fade-out {
+            animation: fadeOut 0.3s forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; top: 30px; }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; top: 20px; }
+        }
+    `;
+    document.head.appendChild(alertStyles);
 
     // ===== Set Current Year in Footer =====
     const yearElement = document.getElementById('year');
     if (yearElement) {
         yearElement.textContent = new Date().getFullYear();
     }
-
-    // ===== Initialize Animations =====
-    // You could add more animations here using libraries like AOS or your own
 });
