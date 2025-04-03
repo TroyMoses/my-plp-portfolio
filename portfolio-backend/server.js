@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2/promise');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const db = require('./config/db');
+const contactService = require('./services/contactService');
+const newsletterService = require('./services/newsletterService');
 
 const app = express();
 
@@ -11,47 +13,16 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Database configuration
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 3306
-};
-
-// Initialize database tables
-async function initializeDatabase() {
+// Initialize database
+(async () => {
   try {
-    const connection = await mysql.createConnection(dbConfig);
-    
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS contacts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        subject VARCHAR(255),
-        message TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS newsletter_subscribers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    await connection.end();
-    console.log('Database initialized successfully');
+    await db.connect();
+    console.log('Database connected successfully');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Database connection failed:', error);
+    process.exit(1);
   }
-}
-
-initializeDatabase();
+})();
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
@@ -187,13 +158,7 @@ async function sendNewsletterConfirmation(email) {
 // Function to notify admin about new subscriber
 async function notifyAdminNewsletter(email) {
   try {
-    const connection = await mysql.createConnection(dbConfig);
-    const [countResult] = await connection.execute(
-      'SELECT COUNT(*) as count FROM newsletter_subscribers'
-    );
-    await connection.end();
-
-    const totalSubscribers = countResult[0].count;
+    const totalSubscribers = await newsletterService.getSubscriberCount();
 
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'Troy Moses Mugabi <noreply@troylegacy.com>',
@@ -240,13 +205,7 @@ app.post('/api/contact', async (req, res) => {
       });
     }
     
-    const connection = await mysql.createConnection(dbConfig);
-    const [result] = await connection.execute(
-      'INSERT INTO contacts (name, email, subject, message) VALUES (?, ?, ?, ?)',
-      [name, email, subject, message]
-    );
-    
-    await connection.end();
+    const result = await contactService.submitContactForm({ name, email, subject, message });
     
     // Send emails (don't await to make response faster)
     Promise.all([
@@ -257,21 +216,16 @@ app.post('/api/contact', async (req, res) => {
     res.status(201).json({ 
       success: true,
       message: 'Message sent successfully! You should receive a confirmation email shortly.',
-      id: result.insertId 
+      id: result.id 
     });
   } catch (error) {
     console.error('Error submitting contact form:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ 
-        success: false,
-        error: 'You have already submitted a message with this email' 
-      });
-    } else {
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to submit message. Please try again later.' 
-      });
-    }
+    res.status(500).json({ 
+      success: false,
+      error: error.code === 'ER_DUP_ENTRY' || error.code === 11000 
+        ? 'You have already submitted a message with this email' 
+        : 'Failed to submit message. Please try again later.' 
+    });
   }
 });
 
@@ -295,13 +249,7 @@ app.post('/api/newsletter', async (req, res) => {
       });
     }
     
-    const connection = await mysql.createConnection(dbConfig);
-    const [result] = await connection.execute(
-      'INSERT INTO newsletter_subscribers (email) VALUES (?)',
-      [email]
-    );
-    
-    await connection.end();
+    const result = await newsletterService.subscribe(email);
     
     // Send emails (don't await to make response faster)
     Promise.all([
@@ -312,26 +260,30 @@ app.post('/api/newsletter', async (req, res) => {
     res.status(201).json({ 
       success: true,
       message: 'Subscribed successfully! Please check your email for confirmation.',
-      id: result.insertId 
+      id: result.id 
     });
   } catch (error) {
     console.error('Error subscribing to newsletter:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ 
-        success: false,
-        error: 'This email is already subscribed' 
-      });
-    } else {
-      res.status(500).json({ 
-        success: false,
-        error: 'Failed to subscribe. Please try again later.' 
-      });
-    }
+    res.status(500).json({ 
+      success: false,
+      error: error.code === 'ER_DUP_ENTRY' || error.code === 11000
+        ? 'This email is already subscribed'
+        : 'Failed to subscribe. Please try again later.'
+    });
   }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    database: process.env.NODE_ENV === 'production' ? 'MongoDB' : 'MySQL',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

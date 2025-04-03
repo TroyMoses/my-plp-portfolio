@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Show success message
-                showAlert('success', data.message || 'Message sent successfully! You should receive a confirmation email shortly. If you do not see it, please check your spam folder.');
+                showAlert('success', 'Message sent successfully! You should receive a confirmation email shortly. If you do not see it, please check your spam folder.');
                 contactForm.reset();
             } catch (error) {
                 console.error('Error submitting form:', error);
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Show success message
-                showAlert('success', data.message || 'Thank you for subscribing! Please check your email, or spam folder for confirmation.');
+                showAlert('success', 'Thank you for subscribing! Please check your email, or spam folder for confirmation.');
                 emailInput.value = '';
             } catch (error) {
                 console.error('Error subscribing:', error);
