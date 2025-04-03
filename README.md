@@ -4,6 +4,8 @@ Welcome to my responsive, modern portfolio website built with HTML, CSS, and Jav
 
 ![Portfolio Screenshot](assets/images/portfolio-screenshot.png)
 
+## To See The Live Demo, Click [Here](https://troymosesmugabi.netlify.app)
+
 ## Features
 
 - **Responsive Design**: Works on all device sizes
